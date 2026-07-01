@@ -1,4 +1,4 @@
-import { NAV } from "../nav";
+import { NAV } from "./nav";
 
 function SidebarBtn({ n, active, onSelect }) {
   const Icon = n.icon;
