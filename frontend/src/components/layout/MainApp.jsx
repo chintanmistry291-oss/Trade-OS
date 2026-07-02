@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import axios, { API } from "@/lib/api";
 import { useTheme } from "@/hooks/useTheme";
@@ -16,82 +16,39 @@ import IPOSection from "@/components/market/IPOSection";
 import ChartModal from "@/components/market/ChartModal";
 import LedgerSection from "@/components/ledger/LedgerSection";
 
-function HeroBanner() {
+// --- જૂનો ડેશબોર્ડ કોડ (તમારે આ જ જોઈતું હતું) ---
+const fmt = (n) => "₹" + Math.round(Number(n) || 0).toLocaleString("en-IN");
+function StatCard({ label, value, tone = "ink" }) {
   return (
-    <div className="card-wine p-6 gradient-hero">
-      <div className="text-[11px] uppercase tracking-widest font-bold mb-2" style={{ color: "var(--inkSoft)" }}>
-        Welcome to Trade OS
+    <div style={{ background: "var(--card)", borderRadius: 16, padding: "20px", border: "1px solid var(--line)" }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--inkSoft)", textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 600 }}>{value}</div>
+    </div>
+  );
+}
+
+function DashboardView({ data }) {
+  const totalCapital = (data.accounts || []).reduce((s, a) => s + Number(a.balance || 0), 0);
+  return (
+    <div className="space-y-6">
+      <h2 className="serif text-2xl">Dashboard</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <StatCard label="Total Capital" value={fmt(totalCapital)} />
       </div>
-      <h1 className="serif text-3xl md:text-4xl leading-tight mb-2">Your personal trading desk.</h1>
-      <p className="text-sm max-w-xl" style={{ color: "var(--inkSoft)" }}>
-        Live Nifty, Sensex, BankNifty, full option chain, IPO GMP &amp; complete trading ledger — all in one place.
-      </p>
     </div>
   );
 }
 
-function MobileNav({ active, onSelect }) {
-  return (
-    <div className="md:hidden flex gap-2 mb-4 overflow-x-auto pb-2">
-      {NAV.map(n => (
-        <button key={n.k} onClick={() => onSelect(n.k)} data-testid={`mnav-${n.k}`}
-                className={active === n.k ? "btn-primary" : "btn-ghost"}
-                style={{ fontSize: 11, whiteSpace: "nowrap" }}>
-          {n.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function ActiveView({ active, indices, movers, onSelect }) {
+// --- મુખ્ય એપ લોજિક ---
+function ActiveView({ active, indices, movers, onSelect, data, setData }) {
+  if (active === "dashboard") return <DashboardView data={data} />;
   if (active === "overview") {
     return (
-      <div className="fade-in space-y-5" data-testid="overview-section">
-        <HeroBanner />
+      <div className="fade-in space-y-5">
+        <div className="card-wine p-6 gradient-hero">
+          <h1 className="serif text-3xl">Your personal trading desk.</h1>
+        </div>
         <IndicesGrid indices={indices} onSelect={onSelect} />
-        <MoversTable movers={movers} onSelect={onSelect} />
-      </div>
-    );
-  }
-  if (active === "indices") {
-    return (
-      <div className="fade-in">
-        <h2 className="serif text-2xl mb-4">Major Indices</h2>
-        <IndicesGrid indices={indices} onSelect={onSelect} />
-      </div>
-    );
-  }
-  if (active === "stocks") {
-    const handleAdd = async (sym) => {
-      try {
-        await axios.post(`${API}/watchlist`, { symbol: sym });
-        toast.success(`${sym} added to watchlist`);
-      } catch (e) {
-        console.error("watchlist add failed", e);
-        toast.error("Add failed");
-      }
-    };
-    return (
-      <div className="fade-in" data-testid="stocks-section">
-        <h2 className="serif text-2xl mb-4">Stock Lookup</h2>
-        <StockSearch onSelect={onSelect} onAdd={handleAdd} />
-        <Watchlist onSelect={onSelect} />
-      </div>
-    );
-  }
-  if (active === "watchlist") {
-    return (
-      <div className="fade-in">
-        <h2 className="serif text-2xl mb-4">My Watchlist</h2>
-        <Watchlist onSelect={onSelect} />
-      </div>
-    );
-  }
-  if (active === "movers") {
-    return (
-      <div className="fade-in">
-        <h2 className="serif text-2xl mb-4">Top Gainers &amp; Losers</h2>
         <MoversTable movers={movers} onSelect={onSelect} />
       </div>
     );
@@ -106,16 +63,35 @@ export default function MainApp() {
   const { theme, toggle } = useTheme();
   const [active, setActive] = useState("overview");
   const [chartSym, setChartSym] = useState(null);
+  const [data, setData] = useState({});
   const { indices, movers, fetchedAt, refresh } = useLiveMarket();
+
+  useEffect(() => {
+    // JSONBin માંથી ડેટા લોડ કરો
+    const BIN_ID = process.env.REACT_APP_BIN_ID;
+    const MASTER_KEY = process.env.REACT_APP_MASTER_KEY;
+    if (BIN_ID) {
+      fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { "X-Master-Key": MASTER_KEY } })
+        .then(res => res.json())
+        .then(json => json.record && setData(json.record))
+        .catch(e => console.error("Cloud sync failed", e));
+    }
+  }, []);
 
   return (
     <div className="App flex" data-testid="app-root">
       <Sidebar active={active} onSelect={setActive} />
-      <main className="flex-1 p-4 md:p-7 min-w-0" data-testid="main-content">
+      <main className="flex-1 p-4 md:p-7 min-w-0">
         <Header theme={theme} onToggleTheme={toggle} onRefresh={refresh} fetchedAt={fetchedAt} />
         <MarketTicker indices={indices} />
-        <MobileNav active={active} onSelect={setActive} />
-        <ActiveView active={active} indices={indices} movers={movers} onSelect={setChartSym} />
+        <ActiveView 
+            active={active} 
+            indices={indices} 
+            movers={movers} 
+            onSelect={setChartSym} 
+            data={data} 
+            setData={setData} 
+        />
       </main>
       {chartSym && <ChartModal symbol={chartSym} onClose={() => setChartSym(null)} />}
     </div>
