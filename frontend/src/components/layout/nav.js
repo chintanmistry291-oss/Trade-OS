@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 
 export const NAV = [
- 
+  // --- LIVE MARKET ---
   { k: "overview", label: "Market View", icon: LayoutDashboard, group: "market" },
   { k: "indices", label: "Indices", icon: ChartArea, group: "market" },
   { k: "stocks", label: "Stocks", icon: Search, group: "market" },
@@ -13,7 +13,8 @@ export const NAV = [
   { k: "options", label: "Option Chain", icon: ChartPie, group: "market" },
   { k: "ipo", label: "Live IPO", icon: Sparkles, group: "market" },
 
-  { k: "dashboard", label: "My Portfolio", icon: LayoutDashboard, group: "ledger" }, // આનાથી તમારા ફોટાવાળા કાર્ડ્સ ખુલશે!
+  // --- TRADING LEDGER ---
+  { k: "dashboard", label: "Dashboard", icon: LayoutDashboard, group: "ledger" }, // Naam change kari didhu chhe!
   { k: "accounts", label: "Capital", icon: Wallet, group: "ledger" },
   { k: "swing", label: "Swing", icon: TrendingUp, group: "ledger" },
   { k: "mutualFunds", label: "Mutual Funds", icon: PieChart, group: "ledger" },
@@ -33,5 +34,5 @@ export const LEDGER_KEYS = new Set([
 export function ledgerKindFromNav(navKey) {
   if (navKey === "ledger_options") return "options";
   if (navKey === "ledger_ipo") return "ipo"; 
-  return navKey; 
+  return navKey;
 }
